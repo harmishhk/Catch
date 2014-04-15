@@ -130,6 +130,17 @@ namespace Catch {
             return *this;
         }
 
+        XmlWriter& writeNotEncodedText( std::string const& text) {
+            if( !text.empty() ){
+                bool tagWasOpen = m_tagIsOpen;
+                ensureTagClosed();
+                if( tagWasOpen )
+                    stream() << m_indent;
+                stream() << text;
+            }
+            return *this;
+        }
+
         XmlWriter& writeComment( std::string const& text ) {
             ensureTagClosed();
             stream() << m_indent << "<!--" << text << "-->";

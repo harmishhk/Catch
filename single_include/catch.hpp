@@ -7975,6 +7975,17 @@ namespace Catch {
             return *this;
         }
 
+        XmlWriter& writeNotEncodedText( std::string const& text) {
+            if( !text.empty() ){
+                bool tagWasOpen = m_tagIsOpen;
+                ensureTagClosed();
+                if( tagWasOpen )
+                    stream() << m_indent;
+                stream() << text;
+            }
+            return *this;
+        }
+
         XmlWriter& writeComment( std::string const& text ) {
             ensureTagClosed();
             stream() << m_indent << "<!--" << text << "-->";
@@ -8241,7 +8252,8 @@ namespace Catch {
     public:
         JunitReporter( ReporterConfig const& _config )
         :   CumulativeReporterBase( _config ),
-            xml( _config.stream() )
+            xml( oss ),
+            swapXml( _config.stream() )
         {}
 
         ~JunitReporter();
@@ -8289,8 +8301,19 @@ namespace Catch {
             writeGroup( *m_testGroups.back(), suiteTime );
         }
 
+        virtual void testRunEnded( TestRunStats const& testRunStats ) {
+            swapXml.startElement( "testsuites" );
+            swapXml.writeAttribute( "tests", testRunStats.totals.assertions.total() );
+            swapXml.writeAttribute( "errors", unexpectedExceptions );
+            swapXml.writeAttribute( "failures", testRunStats.totals.assertions.failed-unexpectedExceptions );
+            swapXml.writeAttribute( "name", testRunStats.runInfo.name);
+            swapXml.writeNotEncodedText(oss.str().erase(0,13));
+            swapXml.endElement();
+            testRunEndedCumulative();
+        }
+
         virtual void testRunEndedCumulative() {
-            xml.endElement();
+            //xml.endElement();
         }
 
         void writeGroup( TestGroupNode const& groupNode, double suiteTime ) {
@@ -8432,6 +8455,8 @@ namespace Catch {
             }
         }
 
+        std::ostringstream oss;
+        XmlWriter swapXml;
         XmlWriter xml;
         Timer suiteTimer;
         std::ostringstream stdOutForSuite;
